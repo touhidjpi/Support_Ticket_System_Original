@@ -25,3 +25,4 @@ Route::post('/replyTicket', [App\Http\Controllers\UserController::class, 'update
 Route::get('/showUSRTicket', [App\Http\Controllers\UserController::class, 'detailsTicket'])->name('showUSRTicket');
 Route::post('/ADMreplyTicket', [App\Http\Controllers\UserController::class, 'ADMupdateTicket'])->name('ADMreplyTicket');
 Route::post('/ADMcloseTicket', [App\Http\Controllers\UserController::class, 'ADMclosedTicket'])->name('ADMcloseTicket');
+Route::get('/AllcloseTicket', [App\Http\Controllers\UserController::class, 'AllcloseTicketInfo'])->name('AllcloseTicket');

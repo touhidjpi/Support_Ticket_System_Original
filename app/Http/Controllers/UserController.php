@@ -125,7 +125,9 @@ class UserController extends Controller
             $uID = $request['userID'];
             $conversation = Eticket::leftJoin('users as u', 'u.id', '=', 'etickets.userID')
             ->leftJoin('users as adm', 'adm.id', '=', 'etickets.replyID')
-            ->where('userID', $uID)->where('token_type', 'Open')->get(['etickets.*', 'u.name as custNm', 'adm.name as adminNm']);
+            ->where('userID', $uID)->where('token_type', $request['status'])
+            ->where('subject', $request['subj'])
+            ->get(['etickets.*', 'u.name as custNm', 'adm.name as adminNm']);
 
             $htmlString ='';
             foreach ($conversation as $conv)
@@ -156,26 +158,29 @@ class UserController extends Controller
                 }
             }
 
-            // Reply Form
-            $htmlString .= '<h5 class="mb-30 padding-top-1x">Reply Message</h5>
-            <form name="ADMreplyTicketform" id="ADMreplyTicketform" method="post">
-                <input type="text" id="ADMuser_id" name="ADMuser_id" class="form-control" value="'.$uID.'" hidden>
-                <div class="form-group">
-                    <textarea class="form-control form-control-rounded" id="ADMreply_text" name="ADMreply_text" rows="8" placeholder="Write your message here..." required=""></textarea>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div style="padding-top:1em; display: flex; justify-content: flex-start">
-                            <button class="btn btn-outline-danger btn_ADMcancel_ticket" id="btn_ADMcancel_ticket" user_ID="'.$uID.'">Closed Ticket</button>
+            if($request['status'] == 'Open')
+            {
+                // Reply Form
+                $htmlString .= '<h5 class="mb-30 padding-top-1x">Reply Message</h5>
+                <form name="ADMreplyTicketform" id="ADMreplyTicketform" method="post">
+                    <input type="text" id="ADMuser_id" name="ADMuser_id" class="form-control" value="'.$uID.'" hidden>
+                    <div class="form-group">
+                        <textarea class="form-control form-control-rounded" id="ADMreply_text" name="ADMreply_text" rows="8" placeholder="Write your message here..." required=""></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div style="padding-top:1em; display: flex; justify-content: flex-start">
+                                <button class="btn btn-outline-danger btn_ADMcancel_ticket" id="btn_ADMcancel_ticket" user_ID="'.$uID.'">Closed Ticket</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div style="padding-top:1em; display: flex; justify-content: flex-end">
+                                <button class="btn btn-outline-primary btn_ADMreply_ticket" id="btn_ADMreply_ticket" type="submit" user_ID="'.$uID.'" subTitle="'.$request['subj'].'">Reply</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div style="padding-top:1em; display: flex; justify-content: flex-end">
-                            <button class="btn btn-outline-primary btn_ADMreply_ticket" id="btn_ADMreply_ticket" type="submit" user_ID="'.$uID.'">Reply</button>
-                        </div>
-                    </div>
-                </div>
-            </form>';
+                </form>';
+            }
 
             return response()->json(['success' => true, 'message' => $htmlString]);
         }
@@ -242,6 +247,129 @@ class UserController extends Controller
             Mail::to($user->email)->send(new ADMMailSender($content));
 
             return response()->json(['success' => true, 'message' => 'Closed the ticket successfully!!']);
+        }
+    }
+
+    public function AllcloseTicketInfo()
+    {
+        if (request()->ajax()) {
+            $htmlString ='';
+            if(Auth::user()->role == 'USR')
+            {
+                /* user part */
+                $usrcount = Eticket::where('token_type', 'Closed')->where('userID', Auth::user()->id)->count();
+                if($usrcount>0)
+                {
+                    $getTicket = Eticket::groupBy('userID')->groupBy('subject')
+                    ->leftJoin('users as u', 'u.id', '=', 'etickets.userID')
+                    ->where('token_type', 'Closed')
+                    ->where('userID', Auth::user()->id)
+                    ->selectRaw("max(etickets.id) as id")
+                    ->selectRaw("max(etickets.userID) as userID")
+                    ->selectRaw("max(etickets.replyID) as replyID")
+                    ->selectRaw("max(etickets.subject) as subject")
+                    ->selectRaw("max(etickets.token_type) as token_type")
+                    ->selectRaw("max(etickets.created_at) as created_at")
+                    ->selectRaw("max(etickets.updated_at) as updated_at")
+                    ->selectRaw('max(u.name) as custNm')
+                    ->get();
+
+                    $htmlString .='<div class="padding-top-2x mt-2 hidden-lg-up"></div>
+                                            <div class="table-responsive margin-bottom-2x">
+                                                <table class="table margin-bottom-none">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date Submitted</th>
+                                                            <th>Last Updated</th>
+                                                            <th>Type</th>
+                                                            <th>Status</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>';
+                                                        foreach ($getTicket as $tl){
+                                                            $htmlString .='<tr>
+                                                                <td>'.date_format($tl->created_at,"d-m-Y").'</td>
+                                                                <td>'.date_format($tl->updated_at,"d-m-Y").'</td>
+                                                                <td>'.$tl->subject.'</td>
+                                                                <td><span class="text-primary">'.$tl->token_type.'</span></td>
+                                                                <td><button type="button" class="AllBtnUSR btn btn-link" style="margin-top:-7px;" uid="'.$tl->userID.'" subTitle="'.$tl['subject'].'" rowID="'.$tl->id.'">View</button></td>
+                                                            </tr>
+                                                            <tr style="display: none;" class="AlltrID'.$tl->userID.'_'.$tl->id.'">
+                                                                <td colspan="6">
+                                                                    <div class="AlldetailsView" id="AllshowTicketDetails'.$tl->userID.'_'.$tl->id.'"></div>
+                                                                </td>
+                                                            </tr>';
+                                                        }
+                    $htmlString .='                  </tbody>
+                                                </table>
+                                            </div>';
+
+                    return response()->json(['success' => true, 'message' => $htmlString]);
+                }
+                else{
+                    return response()->json(['success' => false, 'message' => 'No closed ticket is available!!']);
+                }
+                /* end user part */
+            }
+            else{
+                /* admin part */
+                $admcount = Eticket::where('token_type', 'Closed')->count();
+                if($admcount>0)
+                {
+                    $getTicket = Eticket::groupBy('userID')->groupBy('subject')
+                    ->leftJoin('users as u', 'u.id', '=', 'etickets.userID')
+                    ->where('token_type', 'Closed')
+                    ->selectRaw("max(etickets.id) as id")
+                    ->selectRaw("max(etickets.userID) as userID")
+                    ->selectRaw("max(etickets.replyID) as replyID")
+                    ->selectRaw("max(etickets.subject) as subject")
+                    ->selectRaw("max(etickets.token_type) as token_type")
+                    ->selectRaw("max(etickets.created_at) as created_at")
+                    ->selectRaw("max(etickets.updated_at) as updated_at")
+                    ->selectRaw('max(u.name) as custNm')
+                    ->get();
+
+                    $htmlString .='<div class="padding-top-2x mt-2 hidden-lg-up"></div>
+                                            <div class="table-responsive margin-bottom-2x">
+                                                <table class="table margin-bottom-none">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date Submitted</th>
+                                                            <th>Last Updated</th>
+                                                            <th>User Name</th>
+                                                            <th>Type</th>
+                                                            <th>Priority</th>
+                                                            <th>Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>';
+                                                        foreach ($getTicket as $tl){
+                                                            $htmlString .='<tr>
+                                                                <td>'.date_format($tl->created_at,"d-m-Y").'</td>
+                                                                <td>'.date_format($tl->updated_at,"d-m-Y").'</td>
+                                                                <td><button type="button" class="AllBtnUSR btn btn-link" style="margin-top:-7px;" uid="'.$tl->userID.'" subTitle="'.$tl['subject'].'" rowID="'.$tl->id.'">'.$tl->custNm.'</button></td>
+                                                                <td>'.$tl->subject.'</td>
+                                                                <td><span class="text-warning">High</span></td>
+                                                                <td><span class="text-primary">'.$tl->token_type.'</span></td>
+                                                            </tr>
+                                                            <tr style="display: none;" class="AlltrID'.$tl->userID.'_'.$tl->id.'">
+                                                                <td colspan="6">
+                                                                    <div class="AlldetailsView" id="AllshowTicketDetails'.$tl->userID.'_'.$tl->id.'"></div>
+                                                                </td>
+                                                            </tr>';
+                                                        }
+                    $htmlString .='                  </tbody>
+                                                </table>
+                                            </div>';
+
+                    return response()->json(['success' => true, 'message' => $htmlString]);
+                }
+                else{
+                    return response()->json(['success' => false, 'message' => 'No closed ticket is available!!']);
+                }
+                /* end admin part */
+            }
         }
     }
 }
