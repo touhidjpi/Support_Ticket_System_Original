@@ -38,14 +38,14 @@ Step 1:
 5.	Run npm install jquery.
 
 Step 2: Configure your mail settings in the .env file:
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=465
-MAIL_USERNAME=yourmail@gmail.com
-MAIL_PASSWORD=yourpassword
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS="info@example.com"
-MAIL_FROM_NAME="${APP_NAME}"
+    MAIL_MAILER=smtp
+    MAIL_HOST=smtp.gmail.com
+    MAIL_PORT=465
+    MAIL_USERNAME=yourmail@gmail.com
+    MAIL_PASSWORD=yourpassword
+    MAIL_ENCRYPTION=tls
+    MAIL_FROM_ADDRESS="info@example.com"
+    MAIL_FROM_NAME="${APP_NAME}"
 
 Step 3:
 1.	Run php artisan optimize:clear.
