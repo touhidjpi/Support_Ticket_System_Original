@@ -4,6 +4,7 @@ window.$ = jQuery;
 
 // import toastre from 'toastr';
 // window.tst = toastre;
+$.ajaxSetup({headers: {'X-CSRF-TOKEN': $("meta[name='csrf-token']").attr("content")}});
 
 window.onload = function(){
     $("#new_token").prop("checked", false);
@@ -65,32 +66,32 @@ $('#adm_pre_token').on('click', function(){
     });
 });
 
-$.ajaxSetup({headers: {'X-CSRF-TOKEN': $("meta[name='csrf-token']").attr("content")}});
-
 $(document).on('click', '#btn_sub_ticket', function (event){
     event.preventDefault();
     let baseUrl = "/submitTicket";
     var form = $('#submitTicketform')[0];
     var formdata = new FormData(form);
-    $.ajax({
-        method: "POST",
-        enctype: 'multipart/form-data',
-        url: baseUrl,
-        dataType: 'json',
-        data: formdata,
-        contentType: false,
-        cache: false,
-        processData:false,
-        success: function (data) {
-            $('.userCard').load(document.URL +  ' .userCard', function(){
-                $('.userCard').fadeIn('slow');
+    if(confirm("Please wait until ticket submission is successful !!")){
+        $.ajax({
+            method: "POST",
+            enctype: 'multipart/form-data',
+            url: baseUrl,
+            dataType: 'json',
+            data: formdata,
+            contentType: false,
+            cache: false,
+            processData:false,
+            success: function (data) {
+                $('.userCard').load(document.URL +  ' .userCard', function(){
+                    $('.userCard').fadeIn('slow');
+                    alert(data.message);
+                });
+            },
+            error: function (data, textStatus, errorThrown) {
                 alert(data.message);
-            });
-        },
-        error: function (data, textStatus, errorThrown) {
-            alert(data.message);
-        }
-    });
+            }
+        });
+    }
 });
 
 $(document).on('click', '#btn_reply_ticket', function (event){
@@ -164,7 +165,7 @@ $(document).on('click', '.btn_ADMcancel_ticket', function (event){
     event.preventDefault();
     let uID = $(this).attr('user_ID');
     let baseUrl = "/ADMcloseTicket";
-    if(confirm("Please wait until changed!!")){
+    if(confirm("Please wait until ticket closed is successful !!")){
         $.ajax({
             method: "POST",
             enctype: 'multipart/form-data',
