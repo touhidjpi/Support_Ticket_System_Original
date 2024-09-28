@@ -150,7 +150,7 @@ $(document).on('click', '.btn_ADMreply_ticket', function (event){
         processData:false,
         success: function (data) {
             let baseUrl = '/showUSRTicket';
-            let sDiv = 'showTicketDetails';
+            let sDiv = 'showTicketDetails'+uID;
             ShowDetailsTicket(baseUrl,uID,'Open',sub,sDiv);
             alert(data.message);
         },
